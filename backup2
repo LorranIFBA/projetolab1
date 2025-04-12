@@ -1,0 +1,144 @@
+import dash
+from dash import dcc, html, Input, Output
+from Controller.portfoliocontroller import PortfolioController
+
+user_id = 1
+portfolio_controller = PortfolioController()
+portfolios = portfolio_controller.get_portfolios_by_user_id(user_id)
+portfolio_options = [{"label": p.portfolio_name, "value": p.portfolio_id} for p in portfolios]
+print(portfolio_options)
+
+
+# Initialize Dash app
+app = dash.Dash(__name__, suppress_callback_exceptions=True)
+server = app.server
+
+# Layout
+app.layout = html.Div([
+    # Top Row: Portfolio Selection and Buttons
+    html.Div([
+        dcc.Dropdown(
+            id='portfolio-selector',
+            options= portfolio_options,
+            placeholder='Select a Portfolio',
+            style={'width': '60%', 'display': 'inline-block'}
+        ),
+        html.Button('Create Portfolio', id='create-portfolio-btn', n_clicks=0, style={'margin-left': '10px'}),
+        html.Button('Modify Portfolio', id='modify-portfolio-btn', n_clicks=0, style={'margin-left': '10px'})
+    ], style={'display': 'flex', 'align-items': 'center', 'justify-content': 'space-between'}),
+
+    # Placeholder for dynamic content
+    dcc.Location(id='url', refresh=False),
+    html.Div(id='page-content')
+])
+
+# Function for main dashboard page
+def render_main_dashboard():
+    return html.Div([
+        dcc.Graph(id='portfolio-line-chart'),
+        html.Div([
+            dcc.Graph(id='portfolio-pie-chart', style={'width': '48%', 'display': 'inline-block'}),
+            html.Div(id='portfolio-table', style={'width': '48%', 'display': 'inline-block'})
+        ])
+    ])
+
+# Function for create portfolio page
+def render_create_portfolio_page():
+    return html.Div([
+        html.H3("Create a New Portfolio"),
+        dcc.Input(id='portfolio-name', type='text', placeholder='Portfolio Name', style={'margin-bottom': '10px'}),
+        html.Button('Submit', id='submit-create', n_clicks=0),
+        html.Button('Back to Dashboard', id='back-create', n_clicks=0, style={'margin-left': '10px'})
+    ])
+
+# Function for modify portfolio page
+def render_modify_portfolio_page():
+    return html.Div([
+        html.H3("Modify Portfolio"),
+        dcc.Dropdown(id='modify-portfolio-selector',options=portfolio_options, placeholder='Select Portfolio to Modify'),
+        dcc.Input(id='new-portfolio-name', type='text', placeholder='New Portfolio Name',
+                  style={'margin-bottom': '10px'}),
+        html.Button('Submit', id='submit-modify', n_clicks=0),
+        html.Button('Back to Dashboard', id='back-modify', n_clicks=0, style={'margin-left': '10px'})
+    ])
+
+# Callback for navigation triggered by create/modify buttons
+@app.callback(
+    Output('url', 'pathname'),
+    [Input('create-portfolio-btn', 'n_clicks'),
+     Input('modify-portfolio-btn', 'n_clicks')],
+    prevent_initial_call=True
+)
+def navigate_to_pages(n_create, n_modify):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return '/'
+
+    button_id = ctx.triggered[0]['prop_id'].split('.')[0]
+
+    if button_id == 'create-portfolio-btn':
+        return '/create-portfolio'
+    elif button_id == 'modify-portfolio-btn':
+        return '/modify-portfolio'
+    return '/'
+
+# Callback for navigation triggered by back-create button
+@app.callback(
+    Output('url', 'pathname', allow_duplicate=True),
+    [Input('back-create', 'n_clicks')],
+    prevent_initial_call=True
+)
+def navigate_back_create(n_back_create):
+    if n_back_create:
+        return '/'
+    return '/'
+
+# Callback for navigation triggered by back-modify button
+@app.callback(
+    Output('url', 'pathname', allow_duplicate=True),
+    [Input('back-modify', 'n_clicks')],
+    prevent_initial_call=True
+)
+def navigate_back_modify(n_back_modify):
+    if n_back_modify:
+        return '/'
+    return '/'
+
+# Page content callback
+@app.callback(
+    Output('page-content', 'children'),
+    [Input('url', 'pathname')]
+)
+def display_page(pathname):
+    if pathname == '/create-portfolio':
+        return render_create_portfolio_page()
+    elif pathname == '/modify-portfolio':
+        return render_modify_portfolio_page()
+    return render_main_dashboard()
+
+# Callback for creating a new portfolio
+@app.callback(
+    Output('portfolio-name', 'value'),  # Clear the input field after submission
+    [Input('submit-create', 'n_clicks')],
+    [Input('portfolio-name', 'value')],
+    prevent_initial_call=True
+)
+def create_portfolio(n_clicks, portfolio_name):
+    if n_clicks and portfolio_name:
+        portfolio_controller = PortfolioController()
+        all_portfolios = portfolio_controller.get_all_portfolios()
+        for portfolio in all_portfolios:
+            if portfolio.portfolio_name == portfolio_name:
+                return
+
+        # Create the new portfolio
+        portfolio_controller.add_portfolio(portfolio_name=portfolio_name, user_id=user_id)
+        all_portfolios = portfolio_controller.get_all_portfolios()
+        for portfolio in all_portfolios:
+            print(portfolio.portfolio_name)
+        return ''  # Clear the input field
+    return dash.no_update
+
+# Run app
+if __name__ == '__main__':
+    app.run_server(debug=True)
