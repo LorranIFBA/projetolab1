@@ -1,16 +1,12 @@
 import mysql.connector
 from Model.user import User
+from DatabaseManager.databasemanager import DatabaseManager
 
 class UserDAO:
     def __init__(self):
-        # Open database connection
-        self.__connection = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="123456",
-            database="lab12"
-        )
-        self.__cursor = self.__connection.cursor()
+        dbm = DatabaseManager()
+        self.__connection = dbm.connection
+        self.__cursor = dbm.cursor
 
     # Create
     def create_user(self, user: User):

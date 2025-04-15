@@ -2,17 +2,13 @@ import mysql.connector
 from Model.portfoliostock import PortfolioStock
 from Controller.stockdatacontroller import StockDataController
 from Controller.portfoliocontroller import PortfolioController
+from DatabaseManager.databasemanager import DatabaseManager
 
 class PortfolioStockDAO:
     def __init__(self):
-        # Open database connection
-        self.__connection = mysql.connector.connect(
-            host="localhost",
-            user="root",
-            password="123456",
-            database="lab12"
-        )
-        self.__cursor = self.__connection.cursor()
+        dbm = DatabaseManager()
+        self.__connection = dbm.connection
+        self.__cursor = dbm.cursor
 
     # Create
     def create_portfolio_stock(self, portfolio_stock: PortfolioStock):
